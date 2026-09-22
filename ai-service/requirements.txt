@@ -1,0 +1,9 @@
+fastapi>=0.111.0,<1
+uvicorn[standard]>=0.30.0,<1
+pydantic>=2.7.0,<3
+
+# CPU-only build — this service has no GPU (see docker-compose.yml's
+# 700M memory limit on ai-service; there's no GPU passthrough configured).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0,<3
+transformers>=4.40.0,<5

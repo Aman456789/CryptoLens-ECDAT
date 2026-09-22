@@ -1,0 +1,110 @@
+# Defines the private bridge topology containing the backend, ai-service, redis, mongo, and caddy containers.
+version: '3.9'
+
+services:
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - FRONTEND_URL=${FRONTEND_URL}
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - ecdat-net
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    # not published to the host — only Caddy talks to this on the internal network
+    expose:
+      - "5000"
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=${MONGO_URI}
+      - PROJECT_SECRET=${PROJECT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:8000
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - LLM_TARGET=${LLM_TARGET}
+      - NIM_ENDPOINT_URL=${NIM_ENDPOINT_URL}
+      - KAT_VECTORS_PATH=${KAT_VECTORS_PATH}
+    depends_on:
+      - ai-service
+      - redis
+      - mongo
+    volumes:
+      - ./scanner-cli/rules:/app/rules:ro
+    networks:
+      - ecdat-net
+
+  frontend:
+    build:
+      context: ./frontend
+      # REACT_APP_* vars are baked into the JS bundle at BUILD time by
+      # CRA — setting them under `environment:` below would have no
+      # effect, since the container just serves an already-built static
+      # bundle via nginx. Left empty so axios makes same-origin relative
+      # requests (`/api/assets`) that Caddy then routes to the backend.
+      args:
+        REACT_APP_API_BASE_URL: ""
+    restart: unless-stopped
+    # not published to the host — only Caddy talks to this on the internal network
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    networks:
+      - ecdat-net
+
+  ai-service:
+    build: ./ai-service
+    restart: unless-stopped
+    # NOTE: intentionally no "ports:" or "expose:" mapping to the host —
+    # this service is reachable only via Docker's internal DNS on ecdat-net
+    environment:
+      - TRANSFORMERS_OFFLINE=1
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+    networks:
+      - ecdat-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecdat-net
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - ecdat-net
+
+networks:
+  ecdat-net:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

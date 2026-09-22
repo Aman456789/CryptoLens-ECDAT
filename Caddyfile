@@ -1,0 +1,34 @@
+{
+	# Global options block — set a real contact email before production use
+	email admin@example.com
+}
+
+{$FRONTEND_URL:localhost} {
+	# Caddy handles HTTP (80) and HTTPS (443) automatically, including
+	# certificate issuance/renewal for any non-localhost domain.
+
+	encode gzip
+
+	# API traffic goes to the backend gateway; everything else is the
+	# React SPA served by the frontend container. Both are internal-only
+	# on the ecdat-net Docker bridge network — neither publishes a port
+	# to the host directly (see docker-compose.yml).
+	handle /api/* {
+		reverse_proxy backend:5000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:80 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

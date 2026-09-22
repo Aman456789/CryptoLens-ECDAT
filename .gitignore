@@ -1,0 +1,36 @@
+# --- Secrets / environment -------------------------------------------
+.env
+.env.*
+!.env.example
+
+# --- Node (frontend, backend) ------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+
+# --- Python (ai-service, scanner-cli) -----------------------------------
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# --- Docker / infra -----------------------------------------------------
+caddy_data/
+caddy_config/
+mongo_data/
+redis_data/
+
+# --- Editor / OS ----------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# --- Logs -----------------------------------------------------------------
+*.log
+logs/

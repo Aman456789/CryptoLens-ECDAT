@@ -1,0 +1,29 @@
+{
+  "name": "ecdat-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ECDAT — Node.js/Express API gateway and orchestrator.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongoose": "^8.4.4",
+    "cors": "^2.8.5",
+    "bullmq": "^5.8.3",
+    "ioredis": "^5.4.1",
+    "axios": "^1.7.2",
+    "opossum": "^8.1.4",
+    "bottleneck": "^2.19.5",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

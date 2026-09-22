@@ -1,0 +1,142 @@
+rules:
+  # ---------------------------------------------------------------------
+  # RSA — weak key size (< 2048 bits)
+  # ---------------------------------------------------------------------
+
+  - id: rsa-weak-keysize-node-crypto
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      RSA key generated with modulusLength < 2048 ($BITS-bit). This is
+      breakable classically and gives no meaningful resistance to a
+      quantum adversary running Shor's Algorithm. Migrate to a NIST PQC
+      standard (CRYSTALS-Kyber) — 2048-bit RSA is an interim floor, not
+      a long-term fix.
+    metadata:
+      cwe: "CWE-326: Inadequate Encryption Strength"
+      owasp: "A02:2021 - Cryptographic Failures"
+      ecdat: { algorithm: RSA, domain: weak-keysize }
+    patterns:
+      - pattern-either:
+          - pattern: 'crypto.generateKeyPairSync("rsa", { modulusLength: $BITS, ... })'
+          - pattern: 'crypto.generateKeyPair("rsa", { modulusLength: $BITS, ... }, $CB)'
+      - metavariable-comparison:
+          metavariable: $BITS
+          comparison: $BITS < 2048
+
+  - id: rsa-weak-keysize-node-forge
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      node-forge RSA key generated with bits < 2048 ($BITS-bit) —
+      classically breakable and quantum-vulnerable via Shor's Algorithm.
+    metadata:
+      cwe: "CWE-326: Inadequate Encryption Strength"
+      ecdat: { algorithm: RSA, domain: weak-keysize }
+    patterns:
+      - pattern: 'forge.pki.rsa.generateKeyPair({ bits: $BITS, ... })'
+      - metavariable-comparison:
+          metavariable: $BITS
+          comparison: $BITS < 2048
+
+  - id: rsa-weak-keysize-python-pycryptodome
+    languages: [python]
+    severity: ERROR
+    message: >-
+      RSA key generated with a key size < 2048 bits ($BITS-bit) via
+      PyCryptodome. Classically breakable, and quantum-vulnerable via
+      Shor's Algorithm.
+    metadata:
+      cwe: "CWE-326: Inadequate Encryption Strength"
+      ecdat: { algorithm: RSA, domain: weak-keysize }
+    patterns:
+      - pattern-either:
+          - pattern: RSA.generate($BITS)
+          - pattern: RSA.generate($BITS, ...)
+          - pattern: Crypto.PublicKey.RSA.generate($BITS)
+      - metavariable-comparison:
+          metavariable: $BITS
+          comparison: $BITS < 2048
+
+  - id: rsa-weak-keysize-python-cryptography
+    languages: [python]
+    severity: ERROR
+    message: >-
+      RSA private key generated with key_size < 2048 ($BITS-bit) via the
+      `cryptography` library. Classically breakable, and quantum-vulnerable
+      via Shor's Algorithm.
+    metadata:
+      cwe: "CWE-326: Inadequate Encryption Strength"
+      ecdat: { algorithm: RSA, domain: weak-keysize }
+    patterns:
+      - pattern: rsa.generate_private_key(..., key_size=$BITS, ...)
+      - metavariable-comparison:
+          metavariable: $BITS
+          comparison: $BITS < 2048
+
+  # ---------------------------------------------------------------------
+  # Deprecated hashing algorithms — MD5 / SHA-1
+  # ---------------------------------------------------------------------
+
+  - id: weak-hash-node-crypto
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Deprecated hashing algorithm $ALG in use. MD5 and SHA-1 are both
+      broken for collision resistance and must not be used for anything
+      security-relevant (signatures, integrity checks, password storage).
+      Use SHA-256 or better.
+    metadata:
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      ecdat: { algorithm: "MD5/SHA1", domain: deprecated-hash }
+    patterns:
+      - pattern: crypto.createHash($ALG)
+      - metavariable-regex:
+          metavariable: $ALG
+          regex: (?i)^['"](md5|sha1)['"]$
+
+  - id: weak-hash-python-hashlib-named
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Deprecated hashing algorithm in use (hashlib.md5 / hashlib.sha1).
+      MD5 and SHA-1 are both broken for collision resistance and must not
+      be used for anything security-relevant. Use hashlib.sha256 or
+      better.
+    metadata:
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      ecdat: { algorithm: "MD5/SHA1", domain: deprecated-hash }
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
+
+  - id: weak-hash-python-hashlib-new
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Deprecated hashing algorithm $ALG requested via hashlib.new(). MD5
+      and SHA-1 are both broken for collision resistance. Use
+      hashlib.new("sha256") or better.
+    metadata:
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      ecdat: { algorithm: "MD5/SHA1", domain: deprecated-hash }
+    patterns:
+      - pattern: hashlib.new($ALG, ...)
+      - metavariable-regex:
+          metavariable: $ALG
+          regex: (?i)^['"](md5|sha1)['"]$
+
+  - id: sweet32-des-ede3-cbc
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      3DES cipher detected. Vulnerable to SWEET32 birthday attacks on 64-bit block ciphers.
+    metadata:
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      ecdat: { algorithm: "3DES", domain: "sweet32" }
+    patterns:
+      - pattern: crypto.createCipheriv($ALG, ...)
+      - metavariable-regex:
+          metavariable: $ALG
+          regex: (?i)^['"](des-ede3-cbc|des|blowfish|bf)['"]$

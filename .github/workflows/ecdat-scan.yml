@@ -1,0 +1,40 @@
+name: ECDAT Cryptographic Scan
+
+on:
+  push:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read   # needed to pull the scanner image from ghcr.io
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Authenticates against ghcr.io using the ambient GITHUB_TOKEN — no
+      # separate account or secret to manage, and it sidesteps Docker Hub's
+      # anonymous-pull rate limit entirely (GitHub-hosted runners share IP
+      # pools across thousands of unrelated CI jobs, so that limit gets hit
+      # constantly and looks like a random, unreproducible 429 flake).
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull ECDAT scanner image
+        run: docker pull ghcr.io/${{ github.repository_owner }}/ecdat-scanner:latest
+
+      - name: Run ECDAT scan
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo:ro" \
+            -e ECDAT_TOKEN="${{ secrets.ECDAT_TOKEN }}" \
+            -e PROJECT_SECRET="${{ secrets.PROJECT_SECRET }}" \
+            -e BACKEND_URL="${{ vars.BACKEND_URL }}" \
+            ghcr.io/${{ github.repository_owner }}/ecdat-scanner:latest \
+            /repo
